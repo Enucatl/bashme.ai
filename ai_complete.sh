@@ -1,19 +1,44 @@
+# Place this in your ~/.bashrc or a sourced file
+
 _bashme_ai_fzf_live_reload() {
-    # The command that fzf will run every time the user types a new character
-    # The '{q}' placeholder is replaced by fzf with the current query text.
-    local reload_command="
-      /opt/home/user/venv/bashme/bin/python /home/user/src/bashme.ai/src/bashme/client.py \
-        --current-command '$READLINE_LINE' \
-        --cursor-position '$READLINE_POINT' \
-        --pwd '$PWD' \
-        --api-key '$API_KEY' \
-        --fzf-query {q}"
+    # It's good practice to check if fzf is installed
+    if ! command -v fzf &> /dev/null; then
+        echo "fzf is not installed. Please install it to use this feature." >&2
+        return
+    fi
 
-    # We use fzf's 'reload' feature, bound to the 'change' event
+    # Use a local variable for the python interpreter path for clarity
+    local python_executable="/opt/home/user/venv/bashme/bin/python"
+    local client_script="/home/user/src/bashme.ai/src/bashme/client.py"
+
+    # --- THE FIX ---
+    # Construct the base command that will be run by fzf.
+    # Note the use of double quotes to allow variable expansion.
+    # We escape the inner double quotes for the command-line arguments.
+    # We use printf with %q to safely quote the variables against shell interpretation.
+    local initial_command
+    printf -v initial_command \
+      '%s %s --current-command %q --cursor-position %q --pwd %q --api-key %q 2>/dev/null' \
+      "$python_executable" "$client_script" "$READLINE_LINE" "$READLINE_POINT" "$PWD" "$API_KEY"
+
+    # The reload command is almost identical, but includes the fzf query `{q}`.
+    # We wrap the whole thing in `bash -c "..."` for robust execution.
+    local reload_command
+    printf -v reload_command \
+      'bash -c "%s %s --current-command %q --cursor-position %q --pwd %q --api-key %q --fzf-query %q" 2>/dev/null' \
+      "$python_executable" "$client_script" "$READLINE_LINE" "$READLINE_POINT" "$PWD" "$API_KEY" "{q}"
+
+    # --- THE FZF INVOCATION ---
     local choice
-    choice=$(fzf --reverse --bind "change:reload($reload_command)" --preview 'echo {}')
+    #
+    # 1. We pipe the output of the *initial_command* into fzf to populate it on startup.
+    # 2. The --bind "change:reload(...)" now uses the correctly quoted reload_command.
+    #
+    choice=$(eval "$initial_command" | fzf --reverse --bind "change:reload($reload_command)")
 
+    # The logic for inserting the choice back into the command line is correct and remains the same.
     if [[ -n "$choice" ]]; then
+        # This part of your code was already correct.
         local token_to_replace
         token_to_replace=$(echo "${READLINE_LINE:0:$READLINE_POINT}" | grep -o '[^ ]*$')
         local start_pos=$((READLINE_POINT - ${#token_to_replace}))
@@ -23,5 +48,6 @@ _bashme_ai_fzf_live_reload() {
     fi
 }
 
-# Bind it to a key
+# Bind it to a key (this part was correct)
+# Ensure your API_KEY is exported in .bashrc: export API_KEY="..."
 bind -x '"\ec": _bashme_ai_fzf_live_reload'

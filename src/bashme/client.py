@@ -1,7 +1,7 @@
 import asyncio
 import os
 import logging
-from typing import TypedDict
+from typing import TypedDict, Annotated
 
 from langchain_core.messages.human import HumanMessage
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -26,19 +26,23 @@ logger = logging.getLogger(__name__)
 
 
 class State(TypedDict):
-    messages: list[AnyMessage]
+    messages: Annotated[list[AnyMessage], add_messages]
 
 
 async def create_graph(session, api_key):
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite", temperature=0.2, api_key=api_key
+        model="gemini-2.5-flash-lite",
+        temperature=0.2,
+        api_key=api_key,
+        retry=2,
     )
 
     tools = await load_mcp_tools(session)
     llm_with_tool = llm.bind_tools(tools)
+    logger.debug(f"{tools=}")
 
     system_prompt = await load_mcp_prompt(session, "system_prompt")
-    prompt_template = ChatPromptTemplate.from_messages([
+    prompt_template = ChatPromptTemplate([
         ("system", system_prompt[0].content),
         MessagesPlaceholder("messages"),
     ])
@@ -49,7 +53,7 @@ async def create_graph(session, api_key):
         logger.debug(f"{state=}")
         response = await llm_chain.ainvoke({"messages": state["messages"]})
         logger.debug(f"{response=}")
-        return {"messages": add_messages(state["messages"], [response])}
+        return {"messages": [response]}
 
     # Building the graph
     graph_builder = StateGraph(State)
