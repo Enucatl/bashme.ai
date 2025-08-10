@@ -15,9 +15,9 @@ from langgraph.prebuilt import tools_condition, ToolNode
 from pydantic_core import to_json
 import asyncclick as click
 
-from bashme.server import transport, port
+from bashme.server import port
 
-client = MultiServerMCPClient({
+mcp_client = MultiServerMCPClient({
     "bashme_core": {
         "transport": "streamable_http",
         "url": f"http://localhost:{port}/mcp",
@@ -70,56 +70,3 @@ async def create_graph(session, api_key):
 
     graph = graph_builder.compile()
     return graph
-
-
-@click.command()
-@click.option(
-    "--current-command", required=True, help="The current command line content"
-)
-@click.option("--fzf-query", default=None, help="The current query from the fzf input")
-@click.option(
-    "--cursor-position",
-    required=True,
-    type=int,
-    help="The cursor position in the command line",
-)
-@click.option("--pwd", required=True, help="The current working directory")
-@click.option("--os-info", default="Ubuntu", help="Information about the OS")
-@click.option("--api-key", default=os.environ.get("BASHME_API_KEY"))
-async def main(current_command, fzf_query, cursor_position, pwd, os_info, api_key):
-    """
-    This client provides AI-powered bash completions.
-    It is intended to be called by a bash script, not run interactively.
-    """
-    logging.basicConfig(level=logging.DEBUG)
-    if not api_key:
-        # Fail gracefully if the API key is missing
-        return
-
-    # 1. Format the input as expected by the system prompt
-    input_context = {
-        "current_command": current_command,
-        "fzf_query": fzf_query,
-        "cursor_position": cursor_position,
-        "pwd": pwd,
-        "os_info": os_info,
-    }
-    logger.info(input_context)
-    user_message = f"""
-    Here is the current shell context:
-    ```json
-    {to_json(input_context, indent=2)}
-    ```
-    """
-    async with client.session("bashme_core") as session:
-        agent = await create_graph(session, api_key)
-        response = await agent.ainvoke({
-            "messages": [HumanMessage(content=user_message)]
-        })
-        final_message = response["messages"][-1]
-        if final_message and final_message.content:
-            print(final_message.content)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

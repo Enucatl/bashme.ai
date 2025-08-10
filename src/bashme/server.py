@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import platform
 import subprocess
 import logging
 
@@ -14,6 +15,51 @@ port = 50051
 mcp = FastMCP("bashme_core")
 ttl_cache = TTLCache(maxsize=1024, ttl=5)
 lru_cache = LRUCache(maxsize=1024)
+
+
+@mcp.tool()
+@log_io
+@cached(lru_cache)
+def get_os_info():
+    """
+    Return what OS name and version are we running on.
+    """
+    # General OS name (e.g., 'Linux', 'Darwin' for macOS, 'Windows')
+    os_name = platform.system()
+
+    # More specific information
+    if os_name == "Linux":
+        # On Linux, platform.release() gives the kernel version, which isn't very useful.
+        # platform.version() is more descriptive.
+        # e.g., '#64-Ubuntu SMP PREEMPT_DYNAMIC Tue Nov 21 16:39:10 UTC 2023'
+        version = platform.version()
+        # We can try to get a prettier name, but this is not guaranteed.
+        try:
+            # This function is not available on all systems
+            pretty_name = platform.freedesktop_os_release().get("PRETTY_NAME", "")
+            if pretty_name:
+                return pretty_name  # e.g., "Ubuntu 22.04.3 LTS"
+        except (AttributeError, FileNotFoundError):
+            # Fallback if freedesktop_os_release is not available
+            pass
+        return f"Linux ({version})"
+
+    elif os_name == "Darwin":
+        # On macOS, platform.mac_ver() is the best tool
+        # Returns ('14.1.1', ('', '', ''), 'arm64') for macOS Sonoma on Apple Silicon
+        version, _, machine = platform.mac_ver()
+        return f"macOS {version} ({machine})"
+
+    elif os_name == "Windows":
+        # On Windows, platform.version() gives a good summary
+        # e.g., '10.0.19045'
+        release = platform.release()
+        version = platform.version()
+        return f"Windows {release} (build {version})"
+
+    else:
+        # Fallback for other OSes like BSD, etc.
+        return f"{platform.system()} {platform.release()}"
 
 
 @mcp.tool()
@@ -83,8 +129,9 @@ def man(command_name: str) -> str:
             capture_output=True,
             text=True,
             env={
+                # Prevents `man` from opening an interactive pager like `less`
                 "MANPAGER": "cat"
-            },  # Prevents `man` from opening an interactive pager like `less`
+            },
         )
         return result.stdout
     except subprocess.CalledProcessError:
@@ -192,9 +239,9 @@ def system_prompt() -> str:
 
 
 if __name__ == "__main__":
-    log_level = "INFO"
+    log_level = "DEBUG"
     logger.info(f"Starting bashme.ai server on {transport}://localhost:{port}...")
     try:
-        mcp.run(transport="http", host="localhost", port=port, log_level=log_level)
+        mcp.run(transport=transport, host="localhost", port=port, log_level=log_level)
     except KeyboardInterrupt:
         logger.info("\nShutting down server...")

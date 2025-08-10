@@ -1,0 +1,22 @@
+[Unit]
+Description=Bashme AI Agent Daemon
+# It must start after the tool server, as it depends on it
+After=network.target bashme_server.service
+Wants=bashme_server.service
+
+[Service]
+# Use absolute paths
+ExecStart=/opt/home/user/venv/bashme/bin/python /home/user/src/bashme.ai/src/bashme/agent_daemon.py
+WorkingDirectory=/home/user/src/bashme.ai
+
+# It also needs the API key
+EnvironmentFile=%h/.config/bashme/env
+
+Restart=on-failure
+RestartSec=5s
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

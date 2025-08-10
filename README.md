@@ -16,8 +16,10 @@ uv sync --all-groups
 ```bash
 mkdir -p ~/.config/bashme ~/.config/systemd/user/
 cp bashme_server.service.example bashme_server.service 
+cp bashme_agent.service.example bashme_agent.service 
 # edit if needed, then
 cp bashme_server.service ~/.config/systemd/user/bashme_server.service
+cp bashme_agent.service ~/.config/systemd/user/bashme_agent.service
 # edit the api key
 echo "BASHME_API_KEY=$(vault kv get -mount=secret -field=google_aistudio_api_key airflow)" > .env
 cp .env ~/.config/bashme/env

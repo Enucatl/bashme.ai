@@ -12,12 +12,15 @@ requires-python = ">= 3.11"
 dependencies = [
   "asyncclick",
   "cachetools",
+  "click",
   "decorator",
+  "fastapi",
   "fastmcp",
   "langchain",
   "langchain_google_genai",
   "langchain_mcp_adapters",
   "langgraph",
+  "uvicorn",
 ]
 dynamic = ["version"]
 
