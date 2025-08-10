@@ -15,11 +15,12 @@ from langgraph.prebuilt import tools_condition, ToolNode
 from pydantic_core import to_json
 import asyncclick as click
 
+from bashme.server import transport, port
+
 client = MultiServerMCPClient({
-    "bashme": {
-        "command": "uv",
-        "args": ["run", "mcp", "run", "./src/bashme/server.py"],
-        "transport": "stdio",
+    "bashme_core": {
+        "transport": "streamable_http",
+        "url": f"http://localhost:{port}/mcp",
     },
 })
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ async def create_graph(session, api_key):
         temperature=0.2,
         api_key=api_key,
         retry=2,
+        thinking_budget=0,
     )
 
     tools = await load_mcp_tools(session)
@@ -59,11 +61,13 @@ async def create_graph(session, api_key):
     graph_builder = StateGraph(State)
     graph_builder.add_node("chat_node", chat_node)
     graph_builder.add_node("tool_node", ToolNode(tools=tools))
+
     graph_builder.add_edge(START, "chat_node")
     graph_builder.add_conditional_edges(
         "chat_node", tools_condition, {"tools": "tool_node", "__end__": END}
     )
     graph_builder.add_edge("tool_node", "chat_node")
+
     graph = graph_builder.compile()
     return graph
 
@@ -81,7 +85,7 @@ async def create_graph(session, api_key):
 )
 @click.option("--pwd", required=True, help="The current working directory")
 @click.option("--os-info", default="Ubuntu", help="Information about the OS")
-@click.option("--api-key", default=os.environ.get("API_KEY"))
+@click.option("--api-key", default=os.environ.get("BASHME_API_KEY"))
 async def main(current_command, fzf_query, cursor_position, pwd, os_info, api_key):
     """
     This client provides AI-powered bash completions.
@@ -107,7 +111,7 @@ async def main(current_command, fzf_query, cursor_position, pwd, os_info, api_ke
     {to_json(input_context, indent=2)}
     ```
     """
-    async with client.session("bashme") as session:
+    async with client.session("bashme_core") as session:
         agent = await create_graph(session, api_key)
         response = await agent.ainvoke({
             "messages": [HumanMessage(content=user_message)]

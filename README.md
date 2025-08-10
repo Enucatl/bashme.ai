@@ -11,3 +11,14 @@ uv sync --all-groups
 ```bash
 /opt/home/user/venv/bashme/bin/python /home/user/src/bashme.ai/src/bashme/client.py --current-command "cat ai_"  --cursor-position 7 --pwd $(pwd) --api-key $(vault kv get -mount=secret -field=google_aistudio_api_key airflow)
 ```
+
+# Server systemd daemon
+```bash
+mkdir -p ~/.config/bashme ~/.config/systemd/user/
+cp bashme_server.service.example bashme_server.service 
+# edit if needed, then
+cp bashme_server.service ~/.config/systemd/user/bashme_server.service
+# edit the api key
+echo "BASHME_API_KEY=$(vault kv get -mount=secret -field=google_aistudio_api_key airflow)" > .env
+cp .env ~/.config/bashme/env
+```

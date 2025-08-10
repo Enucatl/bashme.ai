@@ -1,3 +1,6 @@
+# scalene profiling files
+profile.*
+*.service
 package*json
 # Byte-compiled / optimized / DLL files
 __pycache__/

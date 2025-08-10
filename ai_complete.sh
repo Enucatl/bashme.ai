@@ -1,10 +1,14 @@
 # Place this in your ~/.bashrc or a sourced file
 
 _bashme_ai_fzf_live_reload() {
-    # It's good practice to check if fzf is installed
+    # Prerequisite checks
     if ! command -v fzf &> /dev/null; then
         echo "fzf is not installed. Please install it to use this feature." >&2
-        return
+        return 1
+    fi
+    if [[ -z "$BASHME_API_KEY" ]]; then
+        echo "BASHME_API_KEY environment variable is not set." >&2
+        return 1
     fi
 
     # Use a local variable for the python interpreter path for clarity
@@ -19,14 +23,14 @@ _bashme_ai_fzf_live_reload() {
     local initial_command
     printf -v initial_command \
       '%s %s --current-command %q --cursor-position %q --pwd %q --api-key %q 2>/dev/null' \
-      "$python_executable" "$client_script" "$READLINE_LINE" "$READLINE_POINT" "$PWD" "$API_KEY"
+      "$python_executable" "$client_script" "$READLINE_LINE" "$READLINE_POINT" "$PWD" "$BASHME_API_KEY"
 
     # The reload command is almost identical, but includes the fzf query `{q}`.
     # We wrap the whole thing in `bash -c "..."` for robust execution.
     local reload_command
     printf -v reload_command \
       'bash -c "%s %s --current-command %q --cursor-position %q --pwd %q --api-key %q --fzf-query %q" 2>/dev/null' \
-      "$python_executable" "$client_script" "$READLINE_LINE" "$READLINE_POINT" "$PWD" "$API_KEY" "{q}"
+      "$python_executable" "$client_script" "$READLINE_LINE" "$READLINE_POINT" "$PWD" "$BASHME_API_KEY" "{q}"
 
     # --- THE FZF INVOCATION ---
     local choice
@@ -49,5 +53,5 @@ _bashme_ai_fzf_live_reload() {
 }
 
 # Bind it to a key (this part was correct)
-# Ensure your API_KEY is exported in .bashrc: export API_KEY="..."
+# Ensure your BASHME_API_KEY is exported in .bashrc: export BASHME_API_KEY="..."
 bind -x '"\ec": _bashme_ai_fzf_live_reload'

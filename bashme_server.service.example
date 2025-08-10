@@ -1,0 +1,26 @@
+[Unit]
+Description=Bashme AI Companion Server
+# This ensures the service starts after the network is available
+After=network.target
+
+[Service]
+# Replace with the full path to your python executable from Step 2
+ExecStart=/opt/home/user/venv/bashme/bin/python /home/user/src/bashme.ai/src/bashme/server.py
+
+# Set the working directory to your project's root
+WorkingDirectory=/home/user/src/bashme.ai
+
+# Load the BASHME_API_KEY from our dedicated environment file
+EnvironmentFile=%h/.config/bashme/env
+
+# Restart the service automatically if it fails
+Restart=on-failure
+RestartSec=5s
+
+# Standard output and error will be sent to the systemd journal
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+# This makes it start automatically when you log in
+WantedBy=default.target

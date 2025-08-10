@@ -13,11 +13,11 @@ dependencies = [
   "asyncclick",
   "cachetools",
   "decorator",
+  "fastmcp",
   "langchain",
   "langchain_google_genai",
   "langchain_mcp_adapters",
   "langgraph",
-  "mcp",
 ]
 dynamic = ["version"]
 
@@ -31,10 +31,10 @@ build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 dev = [
-    "mcp[cli]",
     "pytest",
     "pytest-mock",
     "ruff",
+    "scalene",
     "setuptools-git-versioning",
 ]
 
